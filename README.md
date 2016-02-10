@@ -1,2 +1,2 @@
-# transition
+# Transition
 Simply project
