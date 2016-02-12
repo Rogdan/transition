@@ -1,13 +1,4 @@
-local ObjectState = {
-	blink = "Blink",
-	dissolve = "Dissolve",
-	fadein = "Fadein",
-	fadeOut = "Fade out",
-	moveBy = "Move by",
-	moveTo = "Move to",
-	scaleBy = "Scale by",
-	scaleTo = "Scale to"
-}
+local ObjectState
 
 local width = display.contentWidth
 local height = display.contentHeight
@@ -20,11 +11,26 @@ local currentX = startX
 
 local currentScreenObject = display.newCircle(width/2, height/2, width/10)
 local newFigure = display.newRect(width/2, height/2, width/5, width/5)
+local currentTransition
+local status
 
-local function initButtons()
+function initObjectState()
+	ObjectState = {
+		blink = blinkFunc,
+		dissolve = dissolveFunc,
+		fadein = fadeInFunc,
+		fadeOut = fadeOutFunc,
+		moveBy = moveByFunc,
+		moveTo = moveToFunc,
+		scaleBy = scaleByFunc,
+		scaleTo = scaleToFunc,
+	}
+end
+
+function initButtons()
 	local counter = 0;
 	for k, v in pairs(ObjectState) do
-		initOneButton(v)
+		initOneButton(k)
 		
 		counter = counter + 1;
 		if(counter == 4) then
@@ -32,15 +38,15 @@ local function initButtons()
 			currentX = startX
 		else
 			currentX = currentX + appendToX
-		end;
-	end;
+		end
+	end
 	
 	local refreshButton = display.newText("Refresh", startX, height/2, native.systemFont, width/24)
-	refreshButton:addEventListener("touch", eventForButton)
+	refreshButton:addEventListener("touch", cancelEvent)
 	refreshButton:setFillColor( 0.72, 0.9, 0.16, 0.78 )
-end;
+end
 
-function initOneButton(buttonText)		
+function initOneButton(buttonText)	
 	options = 
 	{
 		text = buttonText,
@@ -54,93 +60,125 @@ function initOneButton(buttonText)
 	local button = display.newText(options)
 	button:setFillColor( 1, 0.2, 0.2 )
 	button:addEventListener("touch", eventForButton)
-end;
+end
 
 function eventForButton(event)
 	if event.phase == "ended" then
-		chooseEventByButtonText(event.target.text)
-	end;	
-end;
+		ObjectState[event.target.text]()
+	end	
+end
 
-function chooseEventByButtonText(text)
-	if text == "Blink" then
-		blink()
-	elseif text == "Dissolve" then
-		dissolve()
-	elseif text == "Fadein" then
-		fadeIn()
-	elseif text == "Fade out" then
-		fadeOut()
-	elseif text == "Move by" then
-		moveBy();
-	elseif text == "Move to" then
-		moveTo()
-	elseif text == "Scale by" then
-		scaleBy()
-	elseif text == "Scale to" then
-		scaleTo()
-	elseif text == "Refresh" then
-		cancelEvent()
-	end
-end;
+blinkFunc = function()
+	currentTransition = transition.blink( currentScreenObject, { time=1000, tag = "blink",
+		onStart = startEvent, onComplete = endEvent} )
+end
 
-function blink()
-	transition.blink( currentScreenObject, { time=1000, tag = "blink"} )
-end;
-
-function dissolve()
-	transition.dissolve(currentScreenObject, newFigure, 1000, 0)
+dissolveFunc = function()
+	currentTransition = transition.dissolve(currentScreenObject, newFigure, 1000, 0)
 	currentScreenObject, newFigure = newFigure, currentScreenObject
-end;
+end
 
-function fadeOut()
-	transition.fadeOut( currentScreenObject, { time=2000, onCancel = cancelEvent } )
-end;
+fadeOutFunc = function()
+	currentTransition = transition.fadeOut( currentScreenObject, { time=2000,
+		onCancel = cancelEvent, onStart = startEvent, onComplete = endEvent } )
+end
 
-function fadeIn()
-	transition.fadeIn( currentScreenObject, { time=2000, onCancel = cancelEvent } )
-end;
+fadeInFunc = function()
+	currentTransition = transition.fadeIn( currentScreenObject, { time=2000, onCancel = cancelEvent,
+		onStart = startEvent, onComplete = endEvent} )
+end
 
-function moveBy()
+moveByFunc = function()
 	local randomX = math.random(width)
 	local randomY = math.random(height)
 	
-	transition.moveBy(currentScreenObject,{x = randomX, y = randomY, time = 2000, onCancel = cancelEvent})
-end;
+	currentTransition = 
+		transition.moveBy(currentScreenObject,{x = randomX, y = randomY, time = 2000,
+		onCancel = cancelEvent, onStart = startEvent, onComplete = endEvent})
+end
 
-function moveTo()
+moveToFunc = function()
 	local randomX = math.random(width)
 	local randomY = math.random(height)
 	
-	transition.moveTo(currentScreenObject,{x = randomX, y = randomY, time = 2000, onCancel = cancelEvent})
-end;
+	currentTransition = 
+		transition.moveTo(currentScreenObject,{x = randomX, y = randomY, time = 2000,
+		onCancel = cancelEvent, onStart = startEvent, onComplete = endEvent})
+end
 
-function scaleBy()
-	transition.scaleBy(currentScreenObject, {xScale=0.5, yScale=0.5, time=2000, onCancel = cancelEvent})
-end;
+scaleByFunc = function()
+	currentTransition = 
+		transition.scaleBy(currentScreenObject, {xScale=0.5, yScale=0.5, time=2000,
+		onCancel = cancelEvent, onStart = startEvent, onComplete = endEvent})
+end
 
-function scaleTo()
-	transition.scaleBy(currentScreenObject, {xScale=0.5, yScale=0.5, time=2000, onCancel = cancelEvent})
-end;
+scaleToFunc = function()
+	currentTransition = 
+		transition.scaleBy(currentScreenObject, {xScale=0.5, yScale=0.5, time=2000,
+		onCancel = cancelEvent, onStart = startEvent, onComplete = endEvent})
+end
 
 function cancelEvent(event)
 	transition.cancel("blink")
 	returnOnStartPosition(currentScreenObject)
 	returnOnStartPosition(newFigure)
-	fadeIn();
-end;
+	fadeInFunc();
+end
 
 function returnOnStartPosition(object)
 	object.x = width/2
 	object.y = height/2
 	object.width = width/5
 	object.height = width/5
-end;
+end
+
+function startEvent(event)
+	status.text = "status: started"
+end
+
+function endEvent()
+	status.text = "status: ended"
+end
+
+function initStatus()
+	status = display.newText("Status", width*3/4, height/4, native.systemFont, width/21)
+	status:setFillColor(0.2, 0.7, 0.4)
+end
+
+function initResumeButton()
+	resumeButton = display.newText("Resume", width*4/5, height/2, native.systemFont, width/21)
+	resumeButton:setFillColor(0.2, 0.7, 0.4)
+	resumeButton:addEventListener("touch", resumeEvent)
+end
+
+function resumeEvent(event)
+	if event.phase == "ended" then
+		transition.resume(currentTransition)
+		status.text = "status: resume"
+	end
+end
+
+function initPauseButton()
+	pauseButton = display.newText("Pause", width*3/5, height/2, native.systemFont, width/21)
+	pauseButton:setFillColor(0.2, 0.7, 0.4)
+	pauseButton:addEventListener("touch", pauseEvent)
+end
+
+function pauseEvent(event)
+	if event.phase == "ended" then
+		transition.pause(currentTransition)
+		status.text = "status: pause"
+	end
+end
 
 function main()
+	initObjectState()
 	initButtons()
-	dissolve();
-end;
+	initPauseButton()
+	initResumeButton()
+	initStatus()
+	dissolveFunc()
+end
 
 --run main
 main()
